@@ -32,29 +32,29 @@ dbListTables(dbcon)
 
 
 ```{sql connection = "dbcon"}
-drop table if exists Journal;
+DROP TABLE IF EXISTS Journal;
 ```
 
 ```{sql connection = "dbcon"}
-drop table if exists Author;
-```
-
-
-```{sql connection = "dbcon"}
-drop table if exists JournalIssue;
+DROP TABLE IF EXISTS Author;
 ```
 
 
 ```{sql connection = "dbcon"}
-drop table if exists Article;
+DROP TABLE IF EXISTS JournalIssue;
+```
+
+
+```{sql connection = "dbcon"}
+DROP TABLE IF EXISTS Article;
 ```
 
 ```{sql connection = "dbcon"}
-drop table if exists History;
+DROP TABLE IF EXISTS History;
 ```
 
 ```{sql connection = "dbcon"}
-drop table if exists ArticleIssue;
+DROP TABLE IF EXISTS ArticleIssue;
 ```
 
 ### Create Tables
