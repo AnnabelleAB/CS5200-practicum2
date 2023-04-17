@@ -39,11 +39,9 @@ DROP TABLE IF EXISTS Journal;
 DROP TABLE IF EXISTS Author;
 ```
 
-
 ```{sql connection = "dbcon"}
 DROP TABLE IF EXISTS JournalIssue;
 ```
-
 
 ```{sql connection = "dbcon"}
 DROP TABLE IF EXISTS Article;
@@ -107,7 +105,6 @@ CREATE TABLE `Article` (
 );
 ```
 
-
 ```{sql connection = "dbcon"}
 CREATE TABLE `History` (
   `HistoryID` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -119,7 +116,6 @@ CREATE TABLE `History` (
   ON DELETE CASCADE
 );
 ```
-
 
 ```{sql connection = "dbcon"}
 CREATE TABLE `ArticleIssue` (
