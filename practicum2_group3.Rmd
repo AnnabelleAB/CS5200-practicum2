@@ -11,7 +11,7 @@ member: "Annabelle Sun, Yuheng Miao, Hanh Nguyen (Ordered by contribution of Par
 
 ## Q2
 
-### Setup Databse and XML file
+### Setup Database and XML file
 ```{r}
 library(XML)
 library(RSQLite)
