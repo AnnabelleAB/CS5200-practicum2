@@ -1,7 +1,12 @@
 ---
 title: "CS5200 Practicum2 Group3"
-output: html_notebook
-member: "Annabelle Sun, Yuheng Miao, Hanh Nguyen (Ordered by contribution of Part1, 2, 3)"
+output:
+  html_document:
+    df_print: paged
+member: Annabelle Sun, Yuheng Miao, Hanh Nguyen (Ordered by contribution of Part1,
+  2, 3)
+editor_options:
+  chunk_output_type: inline
 ---
 
 # Part 1
@@ -510,6 +515,252 @@ SELECT * FROM Journal;
 ```{sql connection = "dbcon"}
 SELECT * FROM JournalIssue;
 ```
+
+# Part 2
+
+## Q1
+
+Create and populate a star schema with dimension and transaction fact tables. 
+Each row in the fact table will represent one article fact. 
+Include the image of an updated ERD that contains the fact table and any additional required dimension tables. 
+Populate the star schema in R. 
+When building the schema, look a head to Part 3 as the schema is dependent on the eventual OLAP queries.
+
+### Link to Lucid chart
+
+[link](https://lucid.app/lucidchart/a37b3bf2-7583-41c1-8514-db994b7df6c9/edit?viewport_loc=-264%2C-121%2C2128%2C1028%2C0_0&invitationId=inv_f3a7a20d-4003-4b2b-bf53-82aabb7e2787)
+
+### ERD of star schema
+
+![Star schema](Part2_star-schema.png)
+
+### Populate the star schema
+
+#### Clean up
+
+```{sql connection = "dbcon"}
+DROP TABLE IF EXISTS ArticleFact;
+```
+```{sql connection = "dbcon"}
+DROP TABLE IF EXISTS AuthorDim;
+```
+```{sql connection = "dbcon"}
+DROP TABLE IF EXISTS HistoryDim;
+```
+```{sql connection = "dbcon"}
+DROP TABLE IF EXISTS JournalDim;
+```
+
+#### Create and populate tables
+
+1. Author dimension
+
+```{sql connection ="dbcon"}
+CREATE TABLE AuthorDim (
+  AuthorID    INTEGER NOT NULL PRIMARY KEY,
+  LastName    TEXT NOT NULL,
+  ForeName    TEXT NOT NULL,
+  Initials    TEXT NOT NULL,
+  Affiliation TEXT NOT NULL
+);
+```
+```{sql connection ="dbcon"}
+INSERT INTO AuthorDim
+  SELECT AuthorID,
+         LastName,
+         ForeName,
+         Initials,
+         Affiliation 
+    FROM Author;
+```
+
+2. History dimension
+
+```{sql connection ="dbcon"}
+CREATE TABLE HistoryDim (
+  HistoryID   INTEGER NOT NULL PRIMARY KEY,
+  PubDate    DATE NOT NULL,
+  PubStatus TEXT NOT NULL
+);
+```
+```{sql connection ="dbcon"}
+INSERT INTO HistoryDim
+  SELECT HistoryID,
+         PubDate,
+         PubStatus
+    FROM History;
+```
+
+3. Journal dimension
+
+```{sql connection ="dbcon"}
+CREATE TABLE JournalDim (
+  ISSN            TEXT NOT NULL PRIMARY KEY,
+  ISSNType        TEXT NOT NULL,
+  Title           TEXT NOT NULL,
+  ISOAbbreviation TEXT NOT NULL
+);
+```
+```{sql connection ="dbcon"}
+INSERT INTO JournalDim
+  SELECT ISSN,
+         ISSNType,
+         Title,
+         ISOAbbreviation
+    FROM Journal;
+```
+
+4. Article fact
+
+```{sql connection ="dbcon"}
+CREATE TABLE ArticleFact (
+  ISSN          TEXT NOT NULL,
+  AuthorID      INTEGER NOT NULL,
+  HistoryID     INTEGER NOT NULL,
+  ArticleTitle  TEXT NOT NULL,
+  Pagination    TEXT NOT NULL,
+  Language      TEXT NOT NULL,
+  ArticleDate   Date NOT NULL,
+  Volume        INTEGER NOT NULL,
+  Issue         INTEGER NOT NULL,
+  PubDate       TEXT NOT NULL,
+  CitedMedium   TEXT NOT NULL,
+  PRIMARY KEY (ISSN, AuthorID, HistoryID),
+  CONSTRAINT FK_Article_Journal FOREIGN KEY (ISSN)      REFERENCES JournalDim (ISSN)      ON DELETE CASCADE,
+  CONSTRAINT FK_Article_Author  FOREIGN KEY (AuthorID)  REFERENCES AuthorDim (AuthorID)   ON DELETE CASCADE,
+  CONSTRAINT FK_Article_History FOREIGN KEY (HistoryID) REFERENCES HistoryDim (HistoryID) ON DELETE CASCADE
+);
+```
+```{sql connection ="dbcon"}
+INSERT INTO ArticleFact
+  SELECT JI.ISSN        AS ISSN,
+         AI.AuthorID    AS AuthorID,
+         H.HistoryID    AS HistoryID,
+         A.ArticleTitle AS ArticleTitle,
+         A.Pagination   AS Pagination,
+         A.Language     AS Language,
+         A.ArticleDate  AS ArticleDate,
+         JI.Volume      AS Volume,
+         JI.Issue       AS Issue,
+         JI.PubDate     AS IssueDate,
+         JI.CitedMedium AS CitedMedium
+    FROM Article A
+    JOIN JournalIssue JI on JI.JournalIssueID = A.JournalIssueID
+    JOIN Journal J on J.ISSN = JI.ISSN
+    JOIN History H on H.PMID = A.PMID
+    JOIN ArticleIssue AI on AI.PMID = A.PMID
+    JOIN Author AU on AU.AuthorID = AI.AuthorID;
+```
+
+#### Display table
+
+```{sql connection ="dbcon"}
+SELECT * FROM AuthorDim;
+```
+```{sql connection ="dbcon"}
+SELECT * FROM HistoryDim;
+```
+```{sql connection ="dbcon"}
+SELECT * FROM JournalDim;
+```
+```{sql connection ="dbcon"}
+SELECT * FROM ArticleFact;
+```
+
+## Q2
+
+In the same schema as the previous step, create and populate a summary fact table that represents number of articles per time period (quarter, year) by author and by journal. 
+Include the image of an updated ERD that contains the fact table. 
+Populate the fact table in R. When building the schema, look a head to Part 3 as the schema is dependent on the eventual OLAP queries.
+
+![Star schema with fact tables](Part2_star-schema-w-fact.png)
+
+### Clean up
+
+```{sql connection = "dbcon"}
+DROP TABLE IF EXISTS ArticleAuthorSummaryFact;
+```
+```{sql connection = "dbcon"}
+DROP TABLE IF EXISTS ArticleJournalSummaryFact;
+```
+
+### Populate the fact table
+
+1. Number of articles per time period (quarter, year) by author
+
+```{sql connection ="dbcon"}
+CREATE TABLE ArticleAuthorSummaryFact (
+  AuthorID      INTEGER NOT NULL,
+  Quarter       INTEGER NOT NULL,
+  Year          INTEGER NOT NULL,
+  ArticleNumber INTEGER NOT NULL,
+  PRIMARY KEY (AuthorID, Quarter, Year)
+);
+```
+```{sql connection ="dbcon"}
+INSERT INTO ArticleAuthorSummaryFact
+  SELECT AF.AuthorID AS AuthorID,
+         (2 + strftime('%m', HD.PubDate)) / 3 AS Quarter,
+         strftime('%Y', HD.PubDate) AS Year,
+         COUNT(*) AS ArticleNumber
+    FROM (SELECT DISTINCT ISSN, AuthorID, HistoryID FROM ArticleFact) AF
+    JOIN AuthorDim AD ON AD.AuthorID = AF.AuthorID
+    JOIN HistoryDim HD ON HD.HistoryID = AF.HistoryID
+   WHERE HD.PubStatus = 'accepted'
+   GROUP BY AF.AuthorID, Year, Quarter;
+```
+
+2. Number of articles per time period (quarter, year) by journal
+
+```{sql connection ="dbcon"}
+CREATE TABLE ArticleJournalSummaryFact (
+  ISSN          INTEGER NOT NULL,
+  Quarter       INTEGER NOT NULL,
+  Year          INTEGER NOT NULL,
+  ArticleNumber INTEGER NOT NULL,
+  PRIMARY KEY (ISSN, Quarter, Year)
+);
+```
+```{sql connection ="dbcon"}
+INSERT INTO ArticleJournalSummaryFact
+  SELECT AF.ISSN AS ISSN,
+         (2 + strftime('%m', HD.PubDate)) / 3 AS Quarter,
+         strftime('%Y', HD.PubDate) AS Year,
+         COUNT(*) AS ArticleNumber
+    FROM (SELECT DISTINCT ISSN, AuthorID, HistoryID FROM ArticleFact) AF
+    JOIN JournalDim JD ON JD.ISSN = AF.ISSN
+    JOIN HistoryDim HD ON HD.HistoryID = AF.HistoryID
+   WHERE HD.PubStatus = 'accepted'
+   GROUP BY AF.ISSN, Year, Quarter;
+```
+
+### Display results
+
+1. Count number of articles per time year by author
+
+```{sql connection ="dbcon"}
+SELECT AASF.AuthorID,
+       AD.LastName,
+       AD.ForeName,
+       AASF.Year,
+       SUM(AASF.ArticleNumber) AS ArticlesPerYear
+  FROM ArticleAuthorSummaryFact AASF
+  JOIN AuthorDim AD ON AASF.AuthorID = AD.AuthorID
+ GROUP BY AASF.AuthorID, Year;
+```
+
+2. Count number of articles per time year by journal
+
+```{sql connection ="dbcon"}
+SELECT AJSF.ISSN,
+       JD.Title,
+       AJSF.Year,
+       SUM(AJSF.ArticleNumber) AS ArticlesPerYear
+  FROM ArticleJournalSummaryFact AJSF
+  JOIN JournalDim JD ON AJSF.ISSN = JD.ISSN
+ GROUP BY AJSF.ISSN, Year;
+```
+
 ### Close the connection
 ```{r}
 dbDisconnect(dbcon)
