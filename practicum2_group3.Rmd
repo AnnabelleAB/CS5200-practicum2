@@ -614,6 +614,7 @@ INSERT INTO JournalDim
 
 ```{sql connection ="dbcon"}
 CREATE TABLE ArticleFact (
+  ArticleFactID INTEGER PRIMARY KEY AUTOINCREMENT,
   ISSN          TEXT NOT NULL,
   AuthorID      INTEGER NOT NULL,
   HistoryID     INTEGER NOT NULL,
@@ -625,14 +626,25 @@ CREATE TABLE ArticleFact (
   Issue         INTEGER NOT NULL,
   PubDate       TEXT NOT NULL,
   CitedMedium   TEXT NOT NULL,
-  PRIMARY KEY (ISSN, AuthorID, HistoryID),
   CONSTRAINT FK_Article_Journal FOREIGN KEY (ISSN)      REFERENCES JournalDim (ISSN)      ON DELETE CASCADE,
   CONSTRAINT FK_Article_Author  FOREIGN KEY (AuthorID)  REFERENCES AuthorDim (AuthorID)   ON DELETE CASCADE,
   CONSTRAINT FK_Article_History FOREIGN KEY (HistoryID) REFERENCES HistoryDim (HistoryID) ON DELETE CASCADE
 );
 ```
 ```{sql connection ="dbcon"}
-INSERT INTO ArticleFact
+INSERT INTO ArticleFact (
+  ISSN, 
+  AuthorID, 
+  HistoryID, 
+  ArticleTitle, 
+  Pagination, 
+  Language, 
+  ArticleDate,
+  Volume,
+  Issue,
+  PubDate,
+  CitedMedium
+)
   SELECT JI.ISSN        AS ISSN,
          AI.AuthorID    AS AuthorID,
          H.HistoryID    AS HistoryID,
@@ -642,7 +654,7 @@ INSERT INTO ArticleFact
          A.ArticleDate  AS ArticleDate,
          JI.Volume      AS Volume,
          JI.Issue       AS Issue,
-         JI.PubDate     AS IssueDate,
+         JI.PubDate     AS PubDate,
          JI.CitedMedium AS CitedMedium
     FROM Article A
     JOIN JournalIssue JI on JI.JournalIssueID = A.JournalIssueID
@@ -702,8 +714,8 @@ INSERT INTO ArticleAuthorSummaryFact
   SELECT AF.AuthorID AS AuthorID,
          (2 + strftime('%m', HD.PubDate)) / 3 AS Quarter,
          strftime('%Y', HD.PubDate) AS Year,
-         COUNT(*) AS ArticleNumber
-    FROM (SELECT DISTINCT ISSN, AuthorID, HistoryID FROM ArticleFact) AF
+         COUNT(DISTINCT ArticleFactID) AS ArticleNumber
+    FROM ArticleFact AF
     JOIN AuthorDim AD ON AD.AuthorID = AF.AuthorID
     JOIN HistoryDim HD ON HD.HistoryID = AF.HistoryID
    WHERE HD.PubStatus = 'accepted'
@@ -726,8 +738,8 @@ INSERT INTO ArticleJournalSummaryFact
   SELECT AF.ISSN AS ISSN,
          (2 + strftime('%m', HD.PubDate)) / 3 AS Quarter,
          strftime('%Y', HD.PubDate) AS Year,
-         COUNT(*) AS ArticleNumber
-    FROM (SELECT DISTINCT ISSN, AuthorID, HistoryID FROM ArticleFact) AF
+         COUNT(DISTINCT ArticleFactID) AS ArticleNumber
+    FROM ArticleFact AF
     JOIN JournalDim JD ON JD.ISSN = AF.ISSN
     JOIN HistoryDim HD ON HD.HistoryID = AF.HistoryID
    WHERE HD.PubStatus = 'accepted'
