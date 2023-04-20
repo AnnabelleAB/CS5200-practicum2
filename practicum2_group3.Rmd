@@ -526,6 +526,10 @@ Include the image of an updated ERD that contains the fact table and any additio
 Populate the star schema in R. 
 When building the schema, look a head to Part 3 as the schema is dependent on the eventual OLAP queries.
 
+### Link to Lucid chart
+
+[link](https://lucid.app/lucidchart/a37b3bf2-7583-41c1-8514-db994b7df6c9/edit?viewport_loc=-264%2C-121%2C2128%2C1028%2C0_0&invitationId=inv_f3a7a20d-4003-4b2b-bf53-82aabb7e2787)
+
 ### ERD of star schema
 
 ![Star schema](Part2_star-schema.png)
@@ -663,7 +667,7 @@ SELECT * FROM JournalDim;
 SELECT * FROM ArticleFact;
 ```
 
-# Q2
+## Q2
 
 In the same schema as the previous step, create and populate a summary fact table that represents number of articles per time period (quarter, year) by author and by journal. 
 Include the image of an updated ERD that contains the fact table. 
