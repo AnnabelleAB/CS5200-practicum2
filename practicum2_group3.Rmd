@@ -553,6 +553,16 @@ DROP TABLE IF EXISTS JournalDim;
 
 #### Create and populate tables
 
+The following relationships are extracted from the normalized tables:
+- 1 article belongs to 1 journal issue. 1 journal issue has multiple articles. This means JournalID:PMID = many:1
+- 1 aticle has multiple authors and histories. This means PMID:AuthorID = 1: many, and PMID:HistoryID =1:many
+
+Now the fact table is built around Article. This means that 1 article is a combination of journal info, authorID, and historyID.
+
+There are two ways to create the article fact table:
+- Use a complex key.
+- Use an artificial primary key -> chosen for this project.
+
 1. Author dimension
 
 ```{sql connection ="dbcon"}
@@ -612,12 +622,15 @@ INSERT INTO JournalDim
 
 4. Article fact
 
+PMID attribute is kept to identify unique articles in Part 3.
+
 ```{sql connection ="dbcon"}
 CREATE TABLE ArticleFact (
   ArticleFactID INTEGER PRIMARY KEY AUTOINCREMENT,
   ISSN          TEXT NOT NULL,
   AuthorID      INTEGER NOT NULL,
   HistoryID     INTEGER NOT NULL,
+  PMID          TEXT NOT NULL,
   ArticleTitle  TEXT NOT NULL,
   Pagination    TEXT NOT NULL,
   Language      TEXT NOT NULL,
@@ -636,6 +649,7 @@ INSERT INTO ArticleFact (
   ISSN, 
   AuthorID, 
   HistoryID, 
+  PMID,
   ArticleTitle, 
   Pagination, 
   Language, 
@@ -648,6 +662,7 @@ INSERT INTO ArticleFact (
   SELECT JI.ISSN        AS ISSN,
          AI.AuthorID    AS AuthorID,
          H.HistoryID    AS HistoryID,
+         A.PMID         AS PMID,
          A.ArticleTitle AS ArticleTitle,
          A.Pagination   AS Pagination,
          A.Language     AS Language,
@@ -771,6 +786,67 @@ SELECT AJSF.ISSN,
   FROM ArticleJournalSummaryFact AJSF
   JOIN JournalDim JD ON AJSF.ISSN = JD.ISSN
  GROUP BY AJSF.ISSN, Year;
+```
+
+# Part 3
+
+## Number of publications for all journals each quarter
+
+```{sql connection ="dbcon"}
+SELECT Year AS Year, 
+       Quarter, 
+       SUM(ArticleNumber) AS num_of_articles
+  FROM ArticleJournalSummaryFact
+  GROUP BY Year, Quarter;
+```
+
+
+## Average number of days between submission and publication
+
+Extract submission and publication dates for one particular article
+
+```{sql connection ="dbcon"}
+DROP VIEW ArticleSubPubDates_SameColumn;
+```
+```{sql connection ="dbcon"}
+CREATE VIEW ArticleSubPubDates_SameColumn
+AS 
+SELECT AF.PMID,
+       HD.PubStatus,
+       HD.PubDate
+  FROM ArticleFact AF
+  JOIN HistoryDim HD ON HD.HistoryID = AF.HistoryID
+ WHERE HD.PubStatus IN ("accepted", "received")
+ GROUP BY AF.ArticleTitle, HD.PubStatus
+```
+```{sql connection ="dbcon"}
+SELECT * FROM ArticleSubPubDates_SameColumn;
+```
+
+Separate information into 2 columns
+
+```{sql connection ="dbcon"}
+DROP VIEW ArticleSubPubDates;
+```
+```{sql connection ="dbcon"}
+CREATE VIEW ArticleSubPubDates
+AS
+SELECT A1.PMID,
+       A1.PubDate AS ReceivedDate,
+       A2.PubDate AS AcceptedDate
+  FROM ArticleSubPubDates_SameColumn A1
+  JOIN ArticleSubPubDates_SameColumn A2 ON A1.PMID = A2.PMID AND A1.PubStatus <> A2.PubStatus
+ WHERE A1.PubStatus <> "accepted"
+```
+```{sql connection ="dbcon"}
+SELECT * FROM ArticleSubPubDates;
+```
+
+Calculate number of days in between
+
+```{sql connection ="dbcon"}
+SELECT AVG(JULIANDAY(AcceptedDate) - JULIANDAY(ReceivedDate))
+  FROM ArticleSubPubDates;
 ```
 
 ### Close the connection
