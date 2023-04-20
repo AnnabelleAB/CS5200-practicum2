@@ -1,8 +1,11 @@
 ---
 title: "CS5200 Practicum2 Group3"
-output: html_notebook
-member: "Annabelle Sun, Yuheng Miao, Hanh Nguyen (Ordered by contribution of Part1, 2, 3)"
-editor_options: 
+output:
+  html_document:
+    df_print: paged
+member: Annabelle Sun, Yuheng Miao, Hanh Nguyen (Ordered by contribution of Part1,
+  2, 3)
+editor_options:
   chunk_output_type: inline
 ---
 
@@ -668,6 +671,15 @@ Populate the fact table in R. When building the schema, look a head to Part 3 as
 
 ![Star schema with fact tables](Part2_star-schema-w-fact.png)
 
+### Clean up
+
+```{sql connection = "dbcon"}
+DROP TABLE IF EXISTS ArticleAuthorSummaryFact;
+```
+```{sql connection = "dbcon"}
+DROP TABLE IF EXISTS ArticleJournalSummaryFact;
+```
+
 ### Populate the fact table
 
 1. Number of articles per time period (quarter, year) by author
@@ -745,8 +757,7 @@ SELECT AJSF.ISSN,
  GROUP BY AJSF.ISSN, Year;
 ```
 
-
-# Close the connection
+### Close the connection
 ```{r}
 dbDisconnect(dbcon)
 ```
