@@ -761,6 +761,25 @@ SELECT AJSF.ISSN,
  GROUP BY AJSF.ISSN, Year;
 ```
 
+# Q3
+
+## Number of publications for all journals each quarter
+
+```{sql connection ="dbcon"}
+SELECT Year AS Year, 
+       Quarter, 
+       SUM(ArticleNumber) AS num_of_articles
+  FROM ArticleJournalSummaryFact
+  GROUP BY Year, Quarter;
+```
+
+
+## Average number of days between submission and publication
+
+```{sql connection ="dbcon"}
+
+```
+
 ### Close the connection
 ```{r}
 dbDisconnect(dbcon)
