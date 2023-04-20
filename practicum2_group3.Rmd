@@ -670,9 +670,83 @@ Populate the fact table in R. When building the schema, look a head to Part 3 as
 
 ### Populate the fact table
 
+1. Number of articles per time period (quarter, year) by author
+
+```{sql connection ="dbcon"}
+CREATE TABLE ArticleAuthorSummaryFact (
+  AuthorID      INTEGER NOT NULL,
+  Quarter       INTEGER NOT NULL,
+  Year          INTEGER NOT NULL,
+  ArticleNumber INTEGER NOT NULL,
+  PRIMARY KEY (AuthorID, Quarter, Year)
+);
+```
+```{sql connection ="dbcon"}
+INSERT INTO ArticleAuthorSummaryFact
+  SELECT AF.AuthorID AS AuthorID,
+         (2 + strftime('%m', HD.PubDate)) / 3 AS Quarter,
+         strftime('%Y', HD.PubDate) AS Year,
+         COUNT(*) AS ArticleNumber
+    FROM (SELECT DISTINCT ISSN, AuthorID, HistoryID FROM ArticleFact) AF
+    JOIN AuthorDim AD ON AD.AuthorID = AF.AuthorID
+    JOIN HistoryDim HD ON HD.HistoryID = AF.HistoryID
+   WHERE HD.PubStatus = 'accepted'
+   GROUP BY AF.AuthorID, Year, Quarter;
+```
+
+2. Number of articles per time period (quarter, year) by journal
+
+```{sql connection ="dbcon"}
+CREATE TABLE ArticleJournalSummaryFact (
+  ISSN          INTEGER NOT NULL,
+  Quarter       INTEGER NOT NULL,
+  Year          INTEGER NOT NULL,
+  ArticleNumber INTEGER NOT NULL,
+  PRIMARY KEY (ISSN, Quarter, Year)
+);
+```
+```{sql connection ="dbcon"}
+INSERT INTO ArticleJournalSummaryFact
+  SELECT AF.ISSN AS ISSN,
+         (2 + strftime('%m', HD.PubDate)) / 3 AS Quarter,
+         strftime('%Y', HD.PubDate) AS Year,
+         COUNT(*) AS ArticleNumber
+    FROM (SELECT DISTINCT ISSN, AuthorID, HistoryID FROM ArticleFact) AF
+    JOIN JournalDim JD ON JD.ISSN = AF.ISSN
+    JOIN HistoryDim HD ON HD.HistoryID = AF.HistoryID
+   WHERE HD.PubStatus = 'accepted'
+   GROUP BY AF.ISSN, Year, Quarter;
+```
+
+### Display results
+
+1. Count number of articles per time year by author
+
+```{sql connection ="dbcon"}
+SELECT AASF.AuthorID,
+       AD.LastName,
+       AD.ForeName,
+       AASF.Year,
+       SUM(AASF.ArticleNumber) AS ArticlesPerYear
+  FROM ArticleAuthorSummaryFact AASF
+  JOIN AuthorDim AD ON AASF.AuthorID = AD.AuthorID
+ GROUP BY AASF.AuthorID, Year;
+```
+
+2. Count number of articles per time year by journal
+
+```{sql connection ="dbcon"}
+SELECT AJSF.ISSN,
+       JD.Title,
+       AJSF.Year,
+       SUM(AJSF.ArticleNumber) AS ArticlesPerYear
+  FROM ArticleJournalSummaryFact AJSF
+  JOIN JournalDim JD ON AJSF.ISSN = JD.ISSN
+ GROUP BY AJSF.ISSN, Year;
+```
 
 
-### Close the connection
+# Close the connection
 ```{r}
 dbDisconnect(dbcon)
 ```
