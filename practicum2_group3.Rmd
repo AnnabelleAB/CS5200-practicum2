@@ -736,7 +736,7 @@ INSERT INTO ArticleJournalSummaryFact
 
 ### Display results
 
-1. Count number of articles per time year by author
+1. Count number of articles per year by author
 
 ```{sql connection ="dbcon"}
 SELECT AASF.AuthorID,
@@ -749,7 +749,7 @@ SELECT AASF.AuthorID,
  GROUP BY AASF.AuthorID, Year;
 ```
 
-2. Count number of articles per time year by journal
+2. Count number of articles per year by journal
 
 ```{sql connection ="dbcon"}
 SELECT AJSF.ISSN,
