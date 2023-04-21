@@ -981,9 +981,9 @@ data$month <- as.Date(paste0(data$month, "-01"))
 # Create time series plot
 ggplot(data, aes(x = month)) +
   geom_line(aes(y = num_submitted, color = "Submitted")) +
-  geom_line(aes(y = num_accepted, color = "Accepted")) +
-  scale_color_manual(name = "Legend", values = c("Submitted" = "red", "Accepted" = "blue")) +
-  labs(title = "Number of Articles Submitted and Accepted over Time",
+  geom_line(aes(y = num_accepted, color = "Published")) +
+  scale_color_manual(name = "Legend", values = c("Submitted" = "red", "Published" = "blue")) +
+  labs(title = "Number of Articles Submitted and Published over Time",
        x = "Time Period",
        y = "Number of Articles")
 ```
